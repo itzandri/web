@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Label Expired Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(to bottom right, #3498db, #f1c40f, #e74c3c);
+      color: #333;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 15px rgba(0,0,0,0.15);
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      font-family: 'Poppins', sans-serif;
+      font-size: 28px;
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: bold;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: #2980b9;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      margin-top: 15px;
+      margin-right: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: #1c5980;
+    }
+
+    .label-container {
+      margin-top: 25px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .label {
+      border: 1px dashed #555;
+      border-radius: 6px;
+      padding: 10px;
+      width: 170px;
+      height: 100px;
+      background: #f8f9fa;
+      position: relative;
+      font-family: monospace;
+    }
+
+    .top-right {
+      position: absolute;
+      top: 5px;
+      right: 8px;
+      font-weight: bold;
+    }
+
+    .bottom-right {
+      position: absolute;
+      bottom: 5px;
+      right: 8px;
+    }
+
+    .center-label {
+      text-align: center;
+      margin-top: 25px;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 0.9em;
+      margin-top: 40px;
+      color: #444;
+      font-weight: bold;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+
+      #labelArea, #labelArea * {
+        visibility: visible;
+      }
+
+      #labelArea {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+      }
+
+      .footer {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Label Expired Generator</h1>
+
+    <label for="tanggalExpired">Tanggal Expired:</label>
+    <input type="date" id="tanggalExpired">
+
+    <label for="kesegaran">Masa Kesegaran:</label>
+    <select id="kesegaran">
+      <option value="1">H-1 Bulan</option>
+      <option value="2">H-2 Bulan</option>
+      <option value="3">H-3 Bulan</option>
+    </select>
+
+    <label for="inisial">Inisial Pembuat:</label>
+    <input type="text" id="inisial" placeholder="Contoh: VEN">
+
+    <label for="jumlah">Jumlah Label:</label>
+    <input type="number" id="jumlah" value="10" min="1">
+
+    <label for="ukuran">Ukuran Kertas:</label>
+    <select id="ukuran">
+      <option value="A4">A4</option>
+      <option value="Legal">Legal</option>
+      <option value="Thermal">Thermal</option>
+    </select>
+
+    <label for="fontSize">Ukuran Font (1 - 72):</label>
+    <select id="fontSize">
+      <!-- Dihasilkan via JS -->
+    </select>
+
+    <button onclick="generateLabel()">Tampilkan Label</button>
+    <button onclick="window.print()">Print</button>
+
+    <div id="labelArea" class="label-container"></div>
+
+    <div class="footer">Created by: Indomaret Selang Nangka</div>
+  </div>
+
+  <script>
+    // Tambah font size opsi
+    const fontDropdown = document.getElementById("fontSize");
+    for (let i = 6; i <= 72; i++) {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.text = i;
+      if (i === 12) opt.selected = true;
+      fontDropdown.appendChild(opt);
+    }
+
+    function formatDate(date) {
+      const d = date.getDate().toString().padStart(2, '0');
+      const m = (date.getMonth() + 1).toString().padStart(2, '0');
+      const y = date.getFullYear().toString().slice(-2);
+      return `${d}-${m}-${y}`;
+    }
+
+    function generateLabel() {
+      const expiredInput = document.getElementById("tanggalExpired").value;
+      const inisial = document.getElementById("inisial").value.trim().toUpperCase();
+      const bulanMundur = parseInt(document.getElementById("kesegaran").value);
+      const jumlah = parseInt(document.getElementById("jumlah").value);
+      const ukuran = document.getElementById("ukuran").value;
+      const fontSize = parseInt(document.getElementById("fontSize").value);
+
+      if (!expiredInput || !inisial || isNaN(jumlah)) {
+        alert("Mohon isi semua field terlebih dahulu.");
+        return;
+      }
+
+      const labelArea = document.getElementById("labelArea");
+      labelArea.innerHTML = "";
+
+      const expiredDate = new Date(expiredInput);
+      const returDate = new Date(expiredDate);
+      returDate.setMonth(returDate.getMonth() - bulanMundur);
+
+      const batasKesegaran = `(E-${bulanMundur}B)`;
+      const expiredStr = formatDate(expiredDate);
+      const returStr = formatDate(returDate);
+
+      for (let i = 0; i < jumlah; i++) {
+        const div = document.createElement("div");
+        div.className = "label";
+        div.style.fontSize = fontSize + "px";
+        div.innerHTML = `
+          <div class="top-right">${batasKesegaran}</div>
+          <div class="center-label">
+            <u>${expiredStr}</u><br>
+            ${returStr}
+          </div>
+          <div class="bottom-right">${inisial}</div>
+        `;
+        labelArea.appendChild(div);
+      }
+
+      // Ukuran kertas
+      switch (ukuran) {
+        case "A4":
+          document.body.style.width = "21cm";
+          break;
+        case "Legal":
+          document.body.style.width = "21.6cm";
+          break;
+        case "Thermal":
+          document.body.style.width = "8cm";
+          break;
+      }
+    }
+  </script>
+</body>
+</html>
