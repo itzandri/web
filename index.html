@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Database Expired Produk</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    #loginSection, #mainApp {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+    #loginSection {
+      display: block;
+    }
+    #mainApp {
+      display: none;
+    }
+    h2, h3 {
+      color: #2c3e50;
+    }
+    input[type="text"], input[type="password"], input[type="date"], textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      background-color: #27ae60;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1e8449;
+    }
+    .rak {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .rak-header {
+      background: #3498db;
+      color: white;
+      padding: 10px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .rak-body {
+      display: none;
+      padding: 15px;
+      background: #fafafa;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
+    th {
+      background: #2980b9;
+      color: white;
+    }
+    #pdfPreview {
+      display: none;
+      width: 100%;
+      height: 400px;
+      margin-top: 20px;
+      border: 2px solid #3498db;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login Form -->
+<div id="loginSection">
+  <h2>Login untuk Akses Database Produk Expired</h2>
+  <input type="text" id="username" placeholder="Username" />
+  <input type="password" id="password" placeholder="Password" />
+  <button onclick="login()">Login</button>
+  <p id="loginError" style="color:red; display:none;">Username atau password salah!</p>
+</div>
+
+<!-- Main Application -->
+<div id="mainApp">
+  <h2>📦 Database Expired Produk – Toko TEQP / SELANG NANGKA</h2>
+
+  <div class="top-bar">
+    <input type="text" id="globalSearch" placeholder="🔍 Pencarian Global..." />
+    <input type="text" id="rakName" placeholder="➕ Nama RAK Baru" />
+    <button onclick="addRak()">Tambah RAK</button>
+  </div>
+
+  <div id="rakContainer"></div>
+
+  <iframe id="pdfPreview"></iframe>
+  <button id="closePdfBtn" style="display:none;" onclick="closePdf()">❌ Tutup Preview PDF</button>
+</div>
+
+<script>
+  // Login handler
+  function login() {
+    const user = document.getElementById('username').value;
+    const pass = document.getElementById('password').value;
+    if (user === 'admin' && pass === '1234') {
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+    } else {
+      document.getElementById('loginError').style.display = 'block';
+    }
+  }
+
+  let rakData = JSON.parse(localStorage.getItem('rakData')) || {};
+
+  function saveData() {
+    localStorage.setItem('rakData', JSON.stringify(rakData));
+  }
+
+  function formatDate(dateStr) {
+    const [y, m, d] = dateStr.split("-");
+    return `${d}/${m}/${y}`;
+  }
+
+  function calculateReturDate(expiredStr) {
+    const date = new Date(expiredStr);
+    date.setMonth(date.getMonth() - 1);
+    return formatDate(date.toISOString().split('T')[0]);
+  }
+
+  function addRak() {
+    const rakName = document.getElementById('rakName').value.trim();
+    if (!rakName || rakData[rakName]) return;
+    rakData[rakName] = [];
+    saveData();
+    document.getElementById('rakName').value = '';
+    renderRak();
+  }
+
+  function processData(rak) {
+    const input = document.getElementById(`input-${rak}`).value.trim();
+    if (!input) return;
+    const lines = input.split('\n');
+    let newEntries = [];
+
+    for (let line of lines) {
+      const match = line.trim().match(/^([^\s]+)\s+(.+)/);
+      if (!match || match.length < 3) continue;
+      const barcode = match[1];
+      const name = match[2];
+      const expired = prompt(`Tanggal expired untuk ${barcode} - ${name} (format: YYYY-MM-DD):`);
+      if (!expired || isNaN(new Date(expired))) continue;
+      const expiredFormatted = formatDate(expired);
+      const returFormatted = calculateReturDate(expired);
+      newEntries.push({
+        barcode,
+        name,
+        expired: expiredFormatted,
+        retur: returFormatted,
+        expiredRaw: expired
+      });
+    }
+
+    rakData[rak] = rakData[rak].concat(newEntries);
+    rakData[rak].sort((a, b) => new Date(a.expiredRaw) - new Date(b.expiredRaw));
+    saveData();
+    renderTable(rak);
+    document.getElementById(`input-${rak}`).value = '';
+  }
+
+  function renderRak() {
+    const container = document.getElementById('rakContainer');
+    container.innerHTML = '';
+
+    for (let rak in rakData) {
+      const rakDiv = document.createElement('div');
+      rakDiv.className = 'rak';
+
+      const header = document.createElement('div');
+      header.className = 'rak-header';
+      header.innerHTML = `<h3>${rak}</h3>
+        <div>
+          <button onclick="event.stopPropagation(); exportPDF('${rak}')">📄 PDF</button>
+          <button onclick="event.stopPropagation(); deleteRak('${rak}')">🗑️</button>
+        </div>`;
+      header.onclick = () => {
+        const body = rakDiv.querySelector('.rak-body');
+        body.style.display = (body.style.display === 'none' || body.style.display === '') ? 'block' : 'none';
+      };
+
+      const rakBody = document.createElement('div');
+      rakBody.className = 'rak-body';
+      rakBody.innerHTML = `
+        <textarea id="input-${rak}" rows="3" placeholder="BARCODE dan NAMA produk (per baris)"></textarea>
+        <button onclick="processData('${rak}')">Proses</button>
+        <input type="text" placeholder="🔍 Cari di rak ini..." oninput="filterTable('${rak}', this.value)" />
+        <table id="table-${rak}">
+          <thead><tr><th>Barcode</th><th>Nama Produk</th><th>Expired</th><th>Retur</th><th>Aksi</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      `;
+
+      rakDiv.appendChild(header);
+      rakDiv.appendChild(rakBody);
+      container.appendChild(rakDiv);
+
+      renderTable(rak);
+    }
+  }
+
+  function renderTable(rak) {
+    const tbody = document.querySelector(`#table-${rak} tbody`);
+    tbody.innerHTML = '';
+    rakData[rak].forEach((item, index) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.barcode}</td>
+        <td>${item.name}</td>
+        <td>${item.expired}</td>
+        <td>${item.retur}</td>
+        <td><button onclick="deleteItem('${rak}', ${index})">🗑️</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function deleteItem(rak, index) {
+    rakData[rak].splice(index, 1);
+    saveData();
+    renderTable(rak);
+  }
+
+  function deleteRak(rak) {
+    if (confirm(`Yakin ingin hapus rak "${rak}"?`)) {
+      delete rakData[rak];
+      saveData();
+      renderRak();
+    }
+  }
+
+  function filterTable(rak, keyword) {
+    keyword = keyword.toLowerCase();
+    const rows = document.querySelectorAll(`#table-${rak} tbody tr`);
+    rows.forEach(row => {
+      const text = row.innerText.toLowerCase();
+      row.style.display = text.includes(keyword) ? '' : 'none';
+    });
+  }
+
+  document.getElementById('globalSearch').addEventListener('input', function () {
+    const keyword = this.value.toLowerCase();
+    for (let rak in rakData) {
+      rakData[rak].forEach((item, index) => {
+        const match = item.barcode.toLowerCase().includes(keyword) || item.name.toLowerCase().includes(keyword);
+        const row = document.querySelectorAll(`#table-${rak} tbody tr`)[index];
+        if (row) row.style.display = match ? '' : 'none';
+      });
+    }
+  });
+
+  function exportPDF(rak) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.text(`RAK: ${rak}`, 14, 20);
+    const rows = rakData[rak].map((item, i) => [i + 1, item.barcode, item.name, item.expired, item.retur]);
+
+    doc.autoTable({
+      startY: 30,
+      head: [["No", "Barcode", "Nama", "Expired", "Retur"]],
+      body: rows
+    });
+
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    const preview = document.getElementById('pdfPreview');
+    preview.style.display = 'block';
+    preview.src = url;
+    document.getElementById('closePdfBtn').style.display = 'inline-block';
+  }
+
+  function closePdf() {
+    document.getElementById('pdfPreview').style.display = 'none';
+    document.getElementById('closePdfBtn').style.display = 'none';
+    document.getElementById('pdfPreview').src = '';
+  }
+
+  // Initial render
+  if (rakData) renderRak();
+</script>
+
+</body>
+</html>
