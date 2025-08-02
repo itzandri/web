@@ -236,7 +236,7 @@
       const rakBody = document.createElement('div');
       rakBody.className = 'rak-body';
       rakBody.innerHTML = `
-        <textarea id="input-${rak}" rows="3" placeholder="BARCODE dan NAMA produk (per baris)"></textarea>
+        <textarea id="input-${rak}" rows="3" placeholder="PLU/BARCODE dan NAMA produk (per baris)"></textarea>
         <button onclick="processData('${rak}')">Proses</button>
         <input type="text" placeholder="🔍 Cari di rak ini..." oninput="filterTable('${rak}', this.value)" />
         <table id="table-${rak}">
@@ -333,3 +333,4 @@
 
 </body>
 </html>
+
