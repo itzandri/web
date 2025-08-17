@@ -7,14 +7,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #f0f0f0;
-      margin: 0;
-      padding: 20px;
+      margin: 0; padding: 20px;
     }
     .container {
       max-width: 1000px;
@@ -24,94 +21,41 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       padding: 20px;
     }
-    h2, h3 {
-      color: #2c3e50;
-    }
+    h2, h3 { color: #2c3e50; }
     input, textarea {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+      width: 100%; padding: 10px; margin: 8px 0;
+      border: 1px solid #ccc; border-radius: 6px;
     }
     button {
-      background-color: #27ae60;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      margin: 6px 0;
-      border-radius: 6px;
+      background-color: #27ae60; color: white; border: none;
+      padding: 10px 20px; margin: 6px 0; border-radius: 6px;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #1e8449;
-    }
+    button:hover { background-color: #1e8449; }
     .rak {
-      margin-top: 20px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      overflow: hidden;
+      margin-top: 20px; border: 1px solid #ddd;
+      border-radius: 6px; overflow: hidden;
     }
     .rak-header {
-      background: #3498db;
-      color: white;
-      padding: 10px;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
+      background: #3498db; color: white; padding: 10px;
+      cursor: pointer; display: flex; justify-content: space-between;
+      align-items: center; flex-wrap: wrap;
     }
-    .rak-body {
-      display: none;
-      padding: 15px;
-      background: #fafafa;
-    }
+    .rak-body { display: none; padding: 15px; background: #fafafa; }
     table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 14px;
+      width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;
     }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: left;
-    }
-    th {
-      background: #2980b9;
-      color: white;
-    }
-    iframe {
-      width: 100%;
-      height: 400px;
-      border: 2px solid #3498db;
-      display: none;
-    }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #2980b9; color: white; }
+    iframe { width: 100%; height: 400px; border: 2px solid #3498db; display: none; }
 
     @media screen and (max-width: 600px) {
-      .rak-header h3 {
-        font-size: 16px;
-      }
-      table, thead, tbody, th, td, tr {
-        display: block;
-        width: 100%;
-      }
-      th {
-        display: none;
-      }
-      td {
-        border: none;
-        position: relative;
-        padding-left: 50%;
-        margin-bottom: 10px;
-      }
+      .rak-header h3 { font-size: 16px; }
+      table, thead, tbody, th, td, tr { display: block; width: 100%; }
+      th { display: none; }
+      td { border: none; position: relative; padding-left: 50%; margin-bottom: 10px; }
       td::before {
-        position: absolute;
-        top: 8px;
-        left: 10px;
-        font-weight: bold;
-        white-space: nowrap;
+        position: absolute; top: 8px; left: 10px; font-weight: bold; white-space: nowrap;
       }
       td:nth-of-type(1)::before { content: "Barcode"; }
       td:nth-of-type(2)::before { content: "Nama Produk"; }
@@ -193,21 +137,29 @@
       if (!match || match.length < 3) continue;
       const barcode = match[1];
       const name = match[2];
-      const expired = prompt(`Tanggal expired untuk ${barcode} - ${name} (format: YYYY-MM-DD):`);
-      if (!expired || isNaN(new Date(expired))) continue;
-      const expiredFormatted = formatDate(expired);
-      const returFormatted = calculateReturDate(expired);
+      
+      const expired = prompt(`Tanggal expired untuk ${barcode} - ${name} (format: YYYY-MM-DD, kosongkan jika belum tahu):`);
+      let expiredFormatted = "-";
+      let returFormatted = "-";
+      let expiredRaw = "";
+
+      if (expired && !isNaN(new Date(expired))) {
+        expiredFormatted = formatDate(expired);
+        returFormatted = calculateReturDate(expired);
+        expiredRaw = expired;
+      }
+
       newEntries.push({
         barcode,
         name,
         expired: expiredFormatted,
         retur: returFormatted,
-        expiredRaw: expired
+        expiredRaw
       });
     }
 
     rakData[rak] = rakData[rak].concat(newEntries);
-    rakData[rak].sort((a, b) => new Date(a.expiredRaw) - new Date(b.expiredRaw));
+    rakData[rak].sort((a, b) => new Date(a.expiredRaw || "9999-12-31") - new Date(b.expiredRaw || "9999-12-31"));
     saveData();
     renderTable(rak);
     document.getElementById(`input-${rak}`).value = '';
@@ -262,10 +214,29 @@
         <td>${item.name}</td>
         <td>${item.expired}</td>
         <td>${item.retur}</td>
-        <td><button onclick="deleteItem('${rak}', ${index})">🗑️</button></td>
+        <td>
+          <button onclick="editExpired('${rak}', ${index})">✏️</button>
+          <button onclick="deleteItem('${rak}', ${index})">🗑️</button>
+        </td>
       `;
       tbody.appendChild(tr);
     });
+  }
+
+  function editExpired(rak, index) {
+    const newDate = prompt("Masukkan tanggal expired baru (YYYY-MM-DD), atau kosongkan untuk hapus:", rakData[rak][index].expiredRaw);
+    if (newDate === null) return;
+    if (newDate && !isNaN(new Date(newDate))) {
+      rakData[rak][index].expired = formatDate(newDate);
+      rakData[rak][index].retur = calculateReturDate(newDate);
+      rakData[rak][index].expiredRaw = newDate;
+    } else {
+      rakData[rak][index].expired = "-";
+      rakData[rak][index].retur = "-";
+      rakData[rak][index].expiredRaw = "";
+    }
+    saveData();
+    renderTable(rak);
   }
 
   function deleteItem(rak, index) {
@@ -333,4 +304,3 @@
 
 </body>
 </html>
-
